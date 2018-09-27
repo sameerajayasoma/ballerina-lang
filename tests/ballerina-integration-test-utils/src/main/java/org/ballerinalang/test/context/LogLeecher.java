@@ -22,7 +22,9 @@ package org.ballerinalang.test.context;
  */
 public class LogLeecher {
 
-    private String text;
+    private LeecherType leecherType = LeecherType.INFO;
+
+    public String text;
 
     private boolean textFound = false;
 
@@ -38,12 +40,23 @@ public class LogLeecher {
     }
 
     /**
+     * Initializes the Leecher with expected log.
+     *
+     * @param text The log line expected
+     * @param leecherType type of the log leecher
+     */
+    public LogLeecher(String text, LeecherType leecherType) {
+        this.text = text;
+        this.leecherType = leecherType;
+    }
+
+    /**
      * Feed a log line to check if it matches the expected text.
      *
-     * @param logLIne The log line which was read
+     * @param logLine The log line which was read
      */
-    void feedLine(String logLIne) {
-        if (text.contains(logLIne)) {
+    void feedLine(String logLine) {
+        if (text.contains(logLine)) {
             textFound = true;
 
             synchronized (this) {
@@ -63,6 +76,10 @@ public class LogLeecher {
         }
     }
 
+    LeecherType getLeecherType() {
+        return leecherType;
+    }
+
     /**
      * Wait until a specific log is found.
      *
@@ -74,7 +91,7 @@ public class LogLeecher {
         long startTime = System.currentTimeMillis();
 
         synchronized (this) {
-            while (!textFound || forcedExit) {
+            while (!textFound && !forcedExit) {
                 try {
                     this.wait(timeout);
 
@@ -86,5 +103,13 @@ public class LogLeecher {
                 }
             }
         }
+    }
+
+    /**
+     * Leecher type enum.
+     */
+    public enum LeecherType {
+        INFO,
+        ERROR
     }
 }

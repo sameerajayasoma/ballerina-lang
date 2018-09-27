@@ -75,13 +75,13 @@ public class TestCmd implements BLauncherCmd {
     @CommandLine.Option(names = {"--list-groups", "-lg"}, description = "list the groups available in the tests")
     private boolean listGroups;
 
-    @CommandLine.Option(names = "--groups", description = "test groups to be executed")
+    @CommandLine.Option(names = "--groups", split = ",", description = "test groups to be executed")
     private List<String> groupList;
 
-    @CommandLine.Option(names = "--disable-groups", description = "test groups to be disabled")
+    @CommandLine.Option(names = "--disable-groups", split = ",", description = "test groups to be disabled")
     private List<String> disableGroupList;
 
-    @CommandLine.Option(names = "--exclude-packages", description = "packages to be excluded")
+    @CommandLine.Option(names = "--exclude-packages", split = ",", description = "packages to be excluded")
     private List<String> excludedPackageList;
 
     public void execute() {
@@ -91,8 +91,8 @@ public class TestCmd implements BLauncherCmd {
         }
 
         if (sourceFileList != null && sourceFileList.size() > 1) {
-            throw LauncherUtils.createUsageException("Too many arguments. You can only provide a single package or a" +
-                                                     " single file to test command");
+            throw LauncherUtils.createUsageExceptionWithHelp("Too many arguments. You can only provide a single"
+                                                                     + " package or a single file to test command");
         }
 
         Path sourceRootPath = LauncherUtils.getSourceRootPath(sourceRoot);
@@ -118,8 +118,8 @@ public class TestCmd implements BLauncherCmd {
         }
 
         if (groupList != null && disableGroupList != null) {
-            throw LauncherUtils
-                    .createUsageException("Cannot specify both --groups and --disable-groups flags at the same time");
+            throw LauncherUtils.createUsageExceptionWithHelp("Cannot specify both --groups and --disable-groups flags"
+                                                                     + " at the same time");
         }
 
         // Enable remote debugging

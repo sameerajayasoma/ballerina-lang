@@ -20,9 +20,12 @@ package org.wso2.ballerinalang.compiler.util.diagnotic;
 import org.ballerinalang.model.elements.PackageID;
 import org.ballerinalang.util.diagnostic.Diagnostic.DiagnosticPosition;
 
-import java.io.File;
-
 /**
+ * {code DiagnosticPos} represents a specific position in a source file.
+ *
+ * Source position is a combination of the source file, start and end line numbers,
+ * and start and end column numbers.
+ *
  * @since 0.94
  */
 public class DiagnosticPos implements DiagnosticPosition {
@@ -76,7 +79,7 @@ public class DiagnosticPos implements DiagnosticPosition {
         String strPos = "";
 
         if (src.pkgID != PackageID.DEFAULT && cUnitNameAvailable) {
-            strPos = strPos + src.pkgID + File.separator + src.cUnitName + ":";
+            strPos = strPos + src.pkgID + "::" + src.cUnitName + ":";
         } else if (src.pkgID != PackageID.DEFAULT) {
             strPos = strPos + src.pkgID + ":";
         } else {
