@@ -3,14 +3,14 @@ import ballerina/sql;
 import ballerina/io;
 
 public type Customer record {
-    int customerId,
-    string name,
-    float creditLimit,
-    string country,
+    int customerId;
+    string name;
+    float creditLimit;
+    string country;
 };
 
 public type Result record {
-   int val,
+   int val;
 };
 
 function testSelect() returns (int[]) {
@@ -327,7 +327,7 @@ function testH2MemDBUpdate() returns (int, string) {
     insertCountRet = testDB->update("insert into student (id, name) values (15, 'Anne')");
     table dt = check testDB->select("Select * From student", ());
     json j = check <json>dt;
-    string data = io:sprintf("%j", j);
+    string data = io:sprintf("%s", j);
 
     int insertCount = check insertCountRet;
     testDB.stop();
