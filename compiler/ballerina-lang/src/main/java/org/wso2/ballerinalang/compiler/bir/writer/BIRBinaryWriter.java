@@ -83,26 +83,37 @@ public class BIRBinaryWriter {
     private void writeFunction(ByteBuf buf, BIRNode.BIRFunction birFunction) {
         // Function name CP Index
         buf.writeInt(addStringCPEntry(birFunction.name.value));
-        // Function definition or a declaration
-        // Non-zero value means this is a function declaration e.g. extern function
-        buf.writeByte(birFunction.isDeclaration ? 1 : 0);
-        // Visibility
-        buf.writeByte(birFunction.visibility.value());
+        // Flags
+        buf.writeInt(birFunction.flags);
 
         // Function type as a CP Index
         buf.writeInt(addFuncSignature(birFunction.type));
         // Arg count
         buf.writeInt(birFunction.argsCount);
+
+        // Workers
+        writeWorkers(buf, birFunction.workers);
+    }
+
+    private void writeWorkers(ByteBuf buf, List<BIRNode.BIRWorker> birWorkerList) {
+        buf.writeInt(birWorkerList.size());
+        birWorkerList.forEach(worker -> writeWorker(buf, worker));
+    }
+
+    private void writeWorker(ByteBuf buf, BIRNode.BIRWorker birWorker) {
+        // Worker name CP Index
+        buf.writeInt(addStringCPEntry(birWorker.name.value));
+
         // Local variables
-        buf.writeInt(birFunction.localVars.size());
-        for (BIRNode.BIRVariableDcl localVar : birFunction.localVars) {
+        buf.writeInt(birWorker.localVars.size());
+        for (BIRNode.BIRVariableDcl localVar : birWorker.localVars) {
             buf.writeByte(localVar.kind.getValue());
             buf.writeInt(addStringCPEntry(localVar.type.getDesc()));
             buf.writeInt(addStringCPEntry(localVar.name.value));
         }
 
         // Write basic blocks
-        writeBasicBlocks(buf, birFunction.basicBlocks);
+        writeBasicBlocks(buf, birWorker.basicBlocks);
     }
 
     private void writeBasicBlocks(ByteBuf buf, List<BIRBasicBlock> birBBList) {

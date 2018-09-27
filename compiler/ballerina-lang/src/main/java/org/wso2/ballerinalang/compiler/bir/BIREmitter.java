@@ -54,7 +54,7 @@ public class BIREmitter extends BIRVisitor {
     }
 
     public void visit(BIRNode.BIRVariableDcl birVariableDcl) {
-        sb.append("\t").append(birVariableDcl.type).append(" ").append(birVariableDcl.name).append(";\t\t// ");
+        sb.append("\t\t").append(birVariableDcl.type).append(" ").append(birVariableDcl.name).append(";\t\t// ");
         sb.append(birVariableDcl.kind.name().toLowerCase(Locale.ENGLISH)).append("\n");
     }
 
@@ -63,27 +63,33 @@ public class BIREmitter extends BIRVisitor {
         StringJoiner sj = new StringJoiner(",");
         birFunction.type.paramTypes.forEach(paramType -> sj.add(paramType.toString()));
         sb.append(sj.toString()).append(")").append(" -> ").append(birFunction.type.retType).append(" {\n");
+        birFunction.workers.forEach(birWorker -> birWorker.accept(this));
+        sb.append("}\n\n");
+    }
 
-        birFunction.localVars.forEach(birVariableDcl -> birVariableDcl.accept(this));
+    public void visit(BIRNode.BIRWorker birWorker) {
+        sb.append("\t");
+        sb.append("worker ").append(birWorker.name).append("{");
+        birWorker.localVars.forEach(birVariableDcl -> birVariableDcl.accept(this));
         sb.append("\n");
-        birFunction.basicBlocks.forEach(birBasicBlock -> birBasicBlock.accept(this));
+        birWorker.basicBlocks.forEach(birBasicBlock -> birBasicBlock.accept(this));
         sb.deleteCharAt(sb.lastIndexOf("\n"));
         sb.append("}\n\n");
     }
 
     public void visit(BIRNode.BIRBasicBlock birBasicBlock) {
-        sb.append("\t");
+        sb.append("\t\t");
         sb.append(birBasicBlock.id).append(" {\n");
         birBasicBlock.instructions.forEach(instruction -> ((BIRNode) instruction).accept(this));
         if (birBasicBlock.terminator == null) {
             throw new BLangCompilerException("Basic block without a terminator : " + birBasicBlock.id);
         }
         birBasicBlock.terminator.accept(this);
-        sb.append("\t}\n\n");
+        sb.append("\t\t}\n\n");
     }
 
     public void visit(BIRTerminator.Call birCall) {
-        sb.append("\t\t");
+        sb.append("\t\t\t");
         if (birCall.lhsOp != null) {
             birCall.lhsOp.accept(this);
             sb.append(" = ");
@@ -105,7 +111,7 @@ public class BIREmitter extends BIRVisitor {
 
     // Non-terminating instructions
     public void visit(BIRNonTerminator.Move birMove) {
-        sb.append("\t\t");
+        sb.append("\t\t\t");
         birMove.lhsOp.accept(this);
         sb.append(" = ");
         birMove.rhsOp.accept(this);
@@ -113,7 +119,7 @@ public class BIREmitter extends BIRVisitor {
     }
 
     public void visit(BIRNonTerminator.BinaryOp birBinaryOp) {
-        sb.append("\t\t");
+        sb.append("\t\t\t");
         birBinaryOp.lhsOp.accept(this);
         sb.append(" = ").append(birBinaryOp.kind.name().toLowerCase(Locale.ENGLISH)).append(" ");
         birBinaryOp.rhsOp1.accept(this);
@@ -127,7 +133,7 @@ public class BIREmitter extends BIRVisitor {
     }
 
     public void visit(BIRNonTerminator.ConstantLoad birConstantLoad) {
-        sb.append("\t\t");
+        sb.append("\t\t\t");
         birConstantLoad.lhsOp.accept(this);
         sb.append(" = ").append(birConstantLoad.kind.name().toLowerCase(Locale.ENGLISH)).append(" ");
         sb.append(birConstantLoad.value).append(";\n");
@@ -137,15 +143,15 @@ public class BIREmitter extends BIRVisitor {
     // Terminating instructions
 
     public void visit(BIRTerminator.Return birReturn) {
-        sb.append("\t\treturn;\n");
+        sb.append("\t\t\treturn;\n");
     }
 
     public void visit(BIRTerminator.GOTO birGoto) {
-        sb.append("\t\tgoto ").append(birGoto.targetBB.id).append(";\n");
+        sb.append("\t\t\tgoto ").append(birGoto.targetBB.id).append(";\n");
     }
 
     public void visit(BIRTerminator.Branch birBranch) {
-        sb.append("\t\tbranch ");
+        sb.append("\t\t\tbranch ");
         birBranch.op.accept(this);
         sb.append(" [true:").append(birBranch.trueBB.id).append(", false:");
         sb.append(birBranch.falseBB.id).append("];\n");

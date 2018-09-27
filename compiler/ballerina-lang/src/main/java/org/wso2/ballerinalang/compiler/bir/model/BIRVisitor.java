@@ -50,6 +50,10 @@ public abstract class BIRVisitor {
         throw new AssertionError();
     }
 
+    public void visit(BIRNode.BIRWorker birWorker) {
+        throw new AssertionError();
+    }
+
     public void visit(BIRBasicBlock birBasicBlock) {
         throw new AssertionError();
     }

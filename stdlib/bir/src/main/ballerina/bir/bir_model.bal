@@ -14,12 +14,16 @@ public type Package record {
 
 public type Function record {
     int argsCount;
-    BasicBlock[] basicBlocks;
-    boolean isDeclaration;
-    VariableDcl[] localVars;
+    int flags;
     Name name;
     BInvokableType typeValue;
-    Visibility visibility;
+    Worker[] workers;
+};
+
+public type Worker record {
+    BasicBlock[] basicBlocks;
+    VariableDcl[] localVars;
+    Name name;
 };
 
 public type BasicBlock record {

@@ -84,7 +84,7 @@ public abstract class BIRNode {
      *
      * @since 0.980.0
      */
-    public static class BIRFunction extends BIRNode {
+    public static class BIRFunction1 extends BIRNode {
 
         /**
          * Name of the function.
@@ -128,7 +128,7 @@ public abstract class BIRNode {
          */
         public List<BIRBasicBlock> basicBlocks;
 
-        public BIRFunction(Name name, Visibility visibility, BInvokableType type) {
+        public BIRFunction1(Name name, Visibility visibility, BInvokableType type) {
             this.name = name;
             this.visibility = visibility;
             this.type = type;
@@ -138,7 +138,111 @@ public abstract class BIRNode {
 
         @Override
         public void accept(BIRVisitor visitor) {
+//            visitor.visit(this);
+        }
+    }
+
+    /**
+     * A function definition.
+     *
+     * @since 0.980.0
+     */
+    public static class BIRFunction extends BIRCallableUnit {
+
+        public BIRFunction(Name name, int flags, BInvokableType type) {
+            super(name, flags, type);
+        }
+
+        @Override
+        public void accept(BIRVisitor visitor) {
             visitor.visit(this);
+        }
+    }
+
+    /**
+     * A callable unit definition.
+     *
+     * @since 0.980.0
+     */
+    public static class BIRCallableUnit extends BIRNode {
+
+        /**
+         * Name of the function.
+         */
+        public Name name;
+
+        /**
+         * Flags to mark extern, public etc
+         */
+        public int flags;
+
+        /**
+         * Type of this function. e.g., (int, int) returns (int).
+         */
+        public BInvokableType type;
+
+        /**
+         * Number of function arguments.
+         */
+        public int argsCount;
+
+        /**
+         * List of workers in this function.
+         */
+        public List<BIRWorker> workers;
+
+        BIRCallableUnit(Name name, int flags, BInvokableType type) {
+            this.name = name;
+            this.flags = flags;
+            this.type = type;
+            this.workers = new ArrayList<>();
+        }
+
+        @Override
+        public void accept(BIRVisitor visitor) {
+//            visitor.visit(this);
+        }
+
+        public void addLocalVarToAllWorkers(BIRVariableDcl variableDcl) {
+            workers.forEach(w -> w.localVars.add(variableDcl));
+        }
+    }
+
+    /**
+     * A worker definition.
+     *
+     * @since 0.980.0
+     */
+    public static class BIRWorker extends BIRNode {
+
+        /**
+         * Name of the worker.
+         */
+        public Name name;
+
+        /**
+         * User defined local variables of this function.
+         * <p>
+         * First variable is reserved to store the return value of this function. The next 'argsCount'
+         * entries are allocated for function arguments. The rest are for user-defined local variables and
+         * temporary variables.
+         */
+        public List<BIRVariableDcl> localVars;
+
+        /**
+         * List of basic blocks in this function.
+         */
+        public List<BIRBasicBlock> basicBlocks;
+
+        public BIRWorker(Name name) {
+            this.name = name;
+            this.localVars = new ArrayList<>();
+            this.basicBlocks = new ArrayList<>();
+        }
+
+        @Override
+        public void accept(BIRVisitor visitor) {
+//            visitor.visit(this);
         }
     }
 

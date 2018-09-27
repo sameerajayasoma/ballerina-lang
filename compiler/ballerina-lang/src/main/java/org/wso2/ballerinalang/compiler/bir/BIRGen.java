@@ -23,12 +23,14 @@ import org.wso2.ballerinalang.compiler.bir.model.BIRNode.BIRBasicBlock;
 import org.wso2.ballerinalang.compiler.bir.model.BIRNode.BIRFunction;
 import org.wso2.ballerinalang.compiler.bir.model.BIRNode.BIRPackage;
 import org.wso2.ballerinalang.compiler.bir.model.BIRNode.BIRVariableDcl;
+import org.wso2.ballerinalang.compiler.bir.model.BIRNode.BIRWorker;
 import org.wso2.ballerinalang.compiler.bir.model.BIRNonTerminator;
 import org.wso2.ballerinalang.compiler.bir.model.BIRNonTerminator.BinaryOp;
 import org.wso2.ballerinalang.compiler.bir.model.BIRNonTerminator.Move;
 import org.wso2.ballerinalang.compiler.bir.model.BIROperand;
 import org.wso2.ballerinalang.compiler.bir.model.BIROperand.BIRVarRef;
 import org.wso2.ballerinalang.compiler.bir.model.BIRTerminator;
+import org.wso2.ballerinalang.compiler.bir.model.BIRTerminator.Fork;
 import org.wso2.ballerinalang.compiler.bir.model.InstructionKind;
 import org.wso2.ballerinalang.compiler.bir.model.VarKind;
 import org.wso2.ballerinalang.compiler.bir.model.Visibility;
@@ -39,6 +41,7 @@ import org.wso2.ballerinalang.compiler.tree.BLangFunction;
 import org.wso2.ballerinalang.compiler.tree.BLangNodeVisitor;
 import org.wso2.ballerinalang.compiler.tree.BLangPackage;
 import org.wso2.ballerinalang.compiler.tree.BLangVariable;
+import org.wso2.ballerinalang.compiler.tree.BLangWorker;
 import org.wso2.ballerinalang.compiler.tree.expressions.BLangArrayLiteral;
 import org.wso2.ballerinalang.compiler.tree.expressions.BLangBinaryExpr;
 import org.wso2.ballerinalang.compiler.tree.expressions.BLangExpression;
@@ -55,6 +58,7 @@ import org.wso2.ballerinalang.compiler.tree.statements.BLangStatement;
 import org.wso2.ballerinalang.compiler.tree.statements.BLangVariableDef;
 import org.wso2.ballerinalang.compiler.tree.statements.BLangWhile;
 import org.wso2.ballerinalang.compiler.util.CompilerContext;
+import org.wso2.ballerinalang.compiler.util.Name;
 import org.wso2.ballerinalang.compiler.util.Names;
 import org.wso2.ballerinalang.compiler.util.TypeTags;
 
@@ -108,46 +112,79 @@ public class BIRGen extends BLangNodeVisitor {
     }
 
     public void visit(BLangFunction astFunc) {
-        Visibility visibility = getVisibility(astFunc.symbol);
         BInvokableType type = astFunc.symbol.getType();
-        BIRFunction birFunc = new BIRFunction(astFunc.symbol.name, visibility, type);
-        birFunc.isDeclaration = Symbols.isNative(astFunc.symbol);
+        BIRFunction birFunc = new BIRFunction(astFunc.symbol.name, astFunc.symbol.flags, type);
         birFunc.argsCount = astFunc.requiredParams.size() +
                             astFunc.defaultableParams.size() + (astFunc.restParam != null ? 1 : 0);
 
         this.env.enclPkg.functions.add(birFunc);
         this.env.enclFunc = birFunc;
 
+        //TODO remove the hardcoded value "default"
+        BIRWorker defaultWorker = new BIRWorker(new Name("default"));
+
+        // Create the entry basic block
+        BIRBasicBlock entryBB = new BIRBasicBlock(this.env.nextBBId(names));
+        defaultWorker.basicBlocks.add(entryBB);
+        this.env.enclBB = entryBB;
+
+        this.env.enclWorker = defaultWorker;
+
+        astFunc.body.accept(this);
+        this.env.clear();
+
+        List<BIRBasicBlock> workerBasicBlock = new ArrayList<>();
+
+        for (BLangWorker worker : astFunc.workers) {
+            BIRWorker birWorker = new BIRWorker(names.fromIdNode(worker.name));
+
+            // Create the entry basic block
+            BIRBasicBlock workerEntryBB = new BIRBasicBlock(this.env.nextBBId(names));
+            birWorker.basicBlocks.add(workerEntryBB);
+            this.env.enclBB = workerEntryBB;
+
+            workerBasicBlock.add(workerEntryBB);
+
+            this.env.enclWorker = birWorker;
+
+            astFunc.body.accept(this);
+            birWorker.basicBlocks.add(this.env.returnBB);
+            this.env.clear();
+
+            // Rearrange basic block ids.
+            birWorker.basicBlocks.forEach(bb -> bb.id = this.env.nextBBId(names));
+            this.env.clear();
+        }
+
+        if (workerBasicBlock.isEmpty()) {
+            defaultWorker.basicBlocks.add(this.env.returnBB);
+        } else {
+            BIRBasicBlock forkBlock = new BIRBasicBlock(this.env.nextBBId(names));
+            forkBlock.terminator = new Fork(workerBasicBlock);
+            defaultWorker.basicBlocks.add(forkBlock);
+        }
+
+        // Rearrange basic block ids.
+        defaultWorker.basicBlocks.forEach(bb -> bb.id = this.env.nextBBId(names));
+        this.env.clear();
+
         if (astFunc.symbol.retType.tag != TypeTags.NIL) {
             // Special %0 location for storing return values
             BIRVariableDcl retVarDcl = new BIRVariableDcl(astFunc.symbol.retType,
                                                           this.env.nextLocalVarId(names), VarKind.RETURN);
-            birFunc.localVars.add(retVarDcl);
+            birFunc.addLocalVarToAllWorkers(retVarDcl);
         }
 
         // Create variable declaration for function params
         for (BLangVariable requiredParam : astFunc.requiredParams) {
             BIRVariableDcl birVarDcl = new BIRVariableDcl(requiredParam.symbol.type,
                     this.env.nextLocalVarId(names), VarKind.ARG);
-            birFunc.localVars.add(birVarDcl);
+            birFunc.addLocalVarToAllWorkers(birVarDcl);
 
             // We maintain a mapping from variable symbol to the bir_variable declaration.
             // This is required to pull the correct bir_variable declaration for variable references.
             this.env.symbolVarMap.put(requiredParam.symbol, birVarDcl);
         }
-
-        // Create the entry basic block
-        BIRBasicBlock entryBB = new BIRBasicBlock(this.env.nextBBId(names));
-        birFunc.basicBlocks.add(entryBB);
-        this.env.enclBB = entryBB;
-
-        astFunc.body.accept(this);
-        birFunc.basicBlocks.add(this.env.returnBB);
-        this.env.clear();
-
-        // Rearrange basic block ids.
-        birFunc.basicBlocks.forEach(bb -> bb.id = this.env.nextBBId(names));
-        this.env.clear();
     }
 
 
@@ -169,7 +206,7 @@ public class BIRGen extends BLangNodeVisitor {
     public void visit(BLangVariableDef astVarDefStmt) {
         BIRVariableDcl birVarDcl = new BIRVariableDcl(astVarDefStmt.var.symbol.type,
                 this.env.nextLocalVarId(names), VarKind.LOCAL);
-        this.env.enclFunc.localVars.add(birVarDcl);
+        this.env.enclWorker.localVars.add(birVarDcl);
 
         // We maintain a mapping from variable symbol to the bir_variable declaration.
         // This is required to pull the correct bir_variable declaration for variable references.
@@ -204,7 +241,7 @@ public class BIRGen extends BLangNodeVisitor {
     public void visit(BLangInvocation invocationExpr) {
         // Lets create a block the jump after successful function return
         BIRBasicBlock thenBB = new BIRBasicBlock(this.env.nextBBId(names));
-        this.env.enclFunc.basicBlocks.add(thenBB);
+        this.env.enclWorker.basicBlocks.add(thenBB);
 
         List<BLangExpression> requiredArgs = invocationExpr.requiredArgs;
         List<BLangExpression> restArgs = invocationExpr.restArgs;
@@ -239,7 +276,7 @@ public class BIRGen extends BLangNodeVisitor {
             // Create a temporary variable to store the return operation result.
             BIRVariableDcl tempVarDcl = new BIRVariableDcl(invocationExpr.type,
                                                            this.env.nextLocalVarId(names), VarKind.TEMP);
-            this.env.enclFunc.localVars.add(tempVarDcl);
+            this.env.enclWorker.localVars.add(tempVarDcl);
             lhsOp = new BIRVarRef(tempVarDcl);
             this.env.targetOperand = lhsOp;
         }
@@ -257,7 +294,7 @@ public class BIRGen extends BLangNodeVisitor {
     public void visit(BLangReturn astReturnStmt) {
         if (astReturnStmt.expr.type.tag != TypeTags.NIL) {
             astReturnStmt.expr.accept(this);
-            BIRVarRef retVarRef = new BIRVarRef(this.env.enclFunc.localVars.get(0));
+            BIRVarRef retVarRef = new BIRVarRef(this.env.enclWorker.localVars.get(0));
             emit(new Move(this.env.targetOperand, retVarRef));
         }
 
@@ -279,7 +316,7 @@ public class BIRGen extends BLangNodeVisitor {
 
         // Create the basic block for the if-then block.
         BIRBasicBlock thenBB = new BIRBasicBlock(this.env.nextBBId(names));
-        this.env.enclFunc.basicBlocks.add(thenBB);
+        this.env.enclWorker.basicBlocks.add(thenBB);
 
         // This basic block will contain statement that comes right after this 'if' statement.
         BIRBasicBlock nextBB = new BIRBasicBlock(this.env.nextBBId(names));
@@ -302,7 +339,7 @@ public class BIRGen extends BLangNodeVisitor {
         if (astIfStmt.elseStmt != null) {
             // Create a basic block for the else block.
             BIRBasicBlock elseBB = new BIRBasicBlock(this.env.nextBBId(names));
-            this.env.enclFunc.basicBlocks.add(elseBB);
+            this.env.enclWorker.basicBlocks.add(elseBB);
             branchIns.falseBB = elseBB;
 
             // Visit the else block. This could be an else-if block or an else block.
@@ -319,14 +356,14 @@ public class BIRGen extends BLangNodeVisitor {
         }
 
         // Set the elseBB as the basic block for the rest of statements followed by this if.
-        this.env.enclFunc.basicBlocks.add(nextBB);
+        this.env.enclWorker.basicBlocks.add(nextBB);
         this.env.enclBB = nextBB;
     }
 
     public void visit(BLangWhile astWhileStmt) {
         // Create a basic block for the while expression.
         BIRBasicBlock whileExprBB = new BIRBasicBlock(this.env.nextBBId(names));
-        this.env.enclFunc.basicBlocks.add(whileExprBB);
+        this.env.enclWorker.basicBlocks.add(whileExprBB);
 
         // Insert a GOTO instruction as the terminal instruction into current basic block.
         this.env.enclBB.terminator = new BIRTerminator.GOTO(whileExprBB);
@@ -338,7 +375,7 @@ public class BIRGen extends BLangNodeVisitor {
 
         // Create the basic block for the while-body block.
         BIRBasicBlock whileBodyBB = new BIRBasicBlock(this.env.nextBBId(names));
-        this.env.enclFunc.basicBlocks.add(whileBodyBB);
+        this.env.enclWorker.basicBlocks.add(whileBodyBB);
 
         // Create the basic block for the statements that comes after the while statement.
         BIRBasicBlock whileEndBB = new BIRBasicBlock(this.env.nextBBId(names));
@@ -355,7 +392,7 @@ public class BIRGen extends BLangNodeVisitor {
             throw new RuntimeException("there cannot be a terminator in while body basic block");
         }
 
-        this.env.enclFunc.basicBlocks.add(whileEndBB);
+        this.env.enclWorker.basicBlocks.add(whileEndBB);
         this.env.enclBB = whileEndBB;
     }
 
@@ -365,7 +402,7 @@ public class BIRGen extends BLangNodeVisitor {
     public void visit(BLangLiteral astLiteralExpr) {
         BIRVariableDcl tempVarDcl = new BIRVariableDcl(astLiteralExpr.type,
                 this.env.nextLocalVarId(names), VarKind.TEMP);
-        this.env.enclFunc.localVars.add(tempVarDcl);
+        this.env.enclWorker.localVars.add(tempVarDcl);
         BIRVarRef toVarRef = new BIRVarRef(tempVarDcl);
         emit(new BIRNonTerminator.ConstantLoad(astLiteralExpr.value, astLiteralExpr.type, toVarRef));
         this.env.targetOperand = toVarRef;
@@ -374,7 +411,7 @@ public class BIRGen extends BLangNodeVisitor {
     public void visit(BLangLocalVarRef astVarRefExpr) {
         BIRVariableDcl tempVarDcl = new BIRVariableDcl(astVarRefExpr.type,
                 this.env.nextLocalVarId(names), VarKind.TEMP);
-        this.env.enclFunc.localVars.add(tempVarDcl);
+        this.env.enclWorker.localVars.add(tempVarDcl);
         BIRVarRef tempVarRef = new BIRVarRef(tempVarDcl);
         BIRVarRef fromVarRef = new BIRVarRef(this.env.symbolVarMap.get(astVarRefExpr.symbol));
         emit(new Move(fromVarRef, tempVarRef));
@@ -391,7 +428,7 @@ public class BIRGen extends BLangNodeVisitor {
         // Create a temporary variable to store the binary operation result.
         BIRVariableDcl tempVarDcl = new BIRVariableDcl(astBinaryExpr.type,
                 this.env.nextLocalVarId(names), VarKind.TEMP);
-        this.env.enclFunc.localVars.add(tempVarDcl);
+        this.env.enclWorker.localVars.add(tempVarDcl);
         BIRVarRef lhsOp = new BIRVarRef(tempVarDcl);
         this.env.targetOperand = lhsOp;
 

@@ -140,4 +140,25 @@ public abstract class BIRTerminator extends BIRNode implements BIRInstruction {
             visitor.visit(this);
         }
     }
+
+    /**
+     * A branch instruction.
+     * <p>
+     * e.g., branch %4 [true:bb4, false:bb6]
+     *
+     * @since 0.980.0
+     */
+    public static class Fork extends BIRTerminator {
+        public List<BIRBasicBlock> forkListBB;
+
+        public Fork(List<BIRBasicBlock> forkListBB) {
+            super(InstructionKind.FORK);
+            this.forkListBB = forkListBB;
+        }
+
+        @Override
+        public void accept(BIRVisitor visitor) {
+//            visitor.visit(this);
+        }
+    }
 }

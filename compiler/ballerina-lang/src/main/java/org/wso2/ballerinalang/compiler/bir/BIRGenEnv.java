@@ -21,6 +21,7 @@ import org.wso2.ballerinalang.compiler.bir.model.BIRNode.BIRBasicBlock;
 import org.wso2.ballerinalang.compiler.bir.model.BIRNode.BIRFunction;
 import org.wso2.ballerinalang.compiler.bir.model.BIRNode.BIRPackage;
 import org.wso2.ballerinalang.compiler.bir.model.BIRNode.BIRVariableDcl;
+import org.wso2.ballerinalang.compiler.bir.model.BIRNode.BIRWorker;
 import org.wso2.ballerinalang.compiler.bir.model.BIROperand;
 import org.wso2.ballerinalang.compiler.semantics.model.symbols.BSymbol;
 import org.wso2.ballerinalang.compiler.util.Name;
@@ -39,6 +40,8 @@ class BIRGenEnv {
     BIRPackage enclPkg;
 
     BIRFunction enclFunc;
+
+    BIRWorker enclWorker;
     // This is a cache which can be stored inside the BIRFunction
     Map<BSymbol, BIRVariableDcl> symbolVarMap = new HashMap<>();
     private int currentBBId = -1;
