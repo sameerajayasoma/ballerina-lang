@@ -1,8 +1,8 @@
 import ballerina/internal;
 
 public type WorkerBodyParser object {
-    BirChannelReader reader,
-    map<VariableDcl> localVarMap,
+    BirChannelReader reader;
+    map<VariableDcl> localVarMap;
     public new(reader) {
     }
 
