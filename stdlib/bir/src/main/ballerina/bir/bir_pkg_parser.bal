@@ -1,13 +1,19 @@
 public type PackageParser object {
     BirChannelReader reader;
+    TypeParser typeParser;
 
-    public new(reader) {
+    public new(reader, typeParser) {
     }
 
     public function parseFunction() returns Function {
         var name = reader.readStringCpRef();
         var flags = reader.readInt32();
-        var sig = reader.readStringCpRef();
+        var typeTag = reader.readInt8();
+        if(typeTag != typeParser.TYPE_TAG_INVOKABL_TYPE){
+            error err = { message: "Illegal function signature type tag" + typeTag };
+            throw err;
+        }
+        var sig = typeParser.parseInvokableType();
         var argsCount = reader.readInt32();
 
         var workerCount = reader.readInt32();
@@ -26,7 +32,7 @@ public type PackageParser object {
             flags: flags,
             workers: workers,
             argsCount: argsCount,
-            typeValue: parseSig(sig)
+            typeValue: sig
         };
     }
 
