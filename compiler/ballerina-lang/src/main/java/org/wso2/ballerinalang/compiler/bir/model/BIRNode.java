@@ -84,69 +84,6 @@ public abstract class BIRNode {
      *
      * @since 0.980.0
      */
-    public static class BIRFunction1 extends BIRNode {
-
-        /**
-         * Name of the function.
-         */
-        public Name name;
-
-        /**
-         * Indicate whether this is a function definition or a declaration.
-         */
-        public boolean isDeclaration;
-
-        /**
-         * Visibility of this function.
-         * 0 - package_private
-         * 1 - private
-         * 2 - public
-         */
-        public Visibility visibility;
-
-        /**
-         * Type of this function. e.g., (int, int) returns (int).
-         */
-        public BInvokableType type;
-
-        /**
-         * Number of function arguments.
-         */
-        public int argsCount;
-
-        /**
-         * User defined local variables of this function.
-         * <p>
-         * First variable is reserved to store the return value of this function. The next 'argsCount'
-         * entries are allocated for function arguments. The rest are for user-defined local variables and
-         * temporary variables.
-         */
-        public List<BIRVariableDcl> localVars;
-
-        /**
-         * List of basic blocks in this function.
-         */
-        public List<BIRBasicBlock> basicBlocks;
-
-        public BIRFunction1(Name name, Visibility visibility, BInvokableType type) {
-            this.name = name;
-            this.visibility = visibility;
-            this.type = type;
-            this.localVars = new ArrayList<>();
-            this.basicBlocks = new ArrayList<>();
-        }
-
-        @Override
-        public void accept(BIRVisitor visitor) {
-//            visitor.visit(this);
-        }
-    }
-
-    /**
-     * A function definition.
-     *
-     * @since 0.980.0
-     */
     public static class BIRFunction extends BIRCallableUnit {
 
         public BIRFunction(Name name, int flags, BInvokableType type) {
@@ -242,7 +179,7 @@ public abstract class BIRNode {
 
         @Override
         public void accept(BIRVisitor visitor) {
-//            visitor.visit(this);
+            visitor.visit(this);
         }
     }
 

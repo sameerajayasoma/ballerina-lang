@@ -29,11 +29,36 @@ public type WorkerBodyParser object {
             i++;
         }
 
+        linkBBs(basicBlocks);
+
         return {
             name: { value: name },
             localVars: dcls,
             basicBlocks: basicBlocks
         };
+    }
+
+    public function linkBBs(BasicBlock[] bbs) {
+        foreach bb in bbs {
+            match bb.terminator {
+                GOTO goto => {
+                    goto.targetBB = getBB(bbs, goto.targetBB.id.value);
+                }
+                any => {
+
+                }
+            }
+        }
+    }
+
+    public function getBB(BasicBlock[] bbs, string id) returns BasicBlock {
+        foreach bb in bbs {
+            if(bb.id.value == id) {
+                return bb;
+            }
+        }
+        error err = { message: "Target BB must exist" };
+        throw err;
     }
 
     public function parseBB() returns BasicBlock {
@@ -54,7 +79,7 @@ public type WorkerBodyParser object {
         var kindTag = reader.readInt8();
         InstructionKind kind = "CONST_LOAD";
         // this is hacky to init to a fake val, but ballerina dosn't support un intialized vers
-        if (kindTag == 6){
+        if (kindTag == 7){
             //TODO: remove redundent
             var bType = reader.readBType();
             kind = "CONST_LOAD";
@@ -63,7 +88,7 @@ public type WorkerBodyParser object {
                 bType,
                 reader.readIntCpRef());
             return constLoad;
-        } else if (kindTag == 5){
+        } else if (kindTag == 6){
             kind = "MOVE";
             var rhsOp = parseVarRef();
             var lhsOp = parseVarRef();
@@ -86,7 +111,7 @@ public type WorkerBodyParser object {
         } else if (kindTag == 1){
             InstructionKind kind = "GOTO";
             return new GOTO(kind, parseBBRef());
-        } else if (kindTag == 4){
+        } else if (kindTag == 5){
             InstructionKind kind = "RETURN";
             return new Return(kind);
         } else if (kindTag == 2){
@@ -126,25 +151,25 @@ public type WorkerBodyParser object {
 
     public function parseBinaryOpInstruction(int kindTag) returns BinaryOp {
         BinaryOpInstructionKind kind = "ADD";
-        if (kindTag == 7){
+        if (kindTag == 8){
             kind = "ADD";
-        } else if (kindTag == 8){
-            kind = "SUB";
         } else if (kindTag == 9){
-            kind = "MUL";
+            kind = "SUB";
         } else if (kindTag == 10){
+            kind = "MUL";
+        } else if (kindTag == 11){
             kind = "DIV";
-        } else if (kindTag == 12){
-            kind = "EQUAL";
         } else if (kindTag == 13){
-            kind = "NOT_EQUAL";
+            kind = "EQUAL";
         } else if (kindTag == 14){
-            kind = "GREATER_THAN";
+            kind = "NOT_EQUAL";
         } else if (kindTag == 15){
-            kind = "GREATER_EQUAL";
+            kind = "GREATER_THAN";
         } else if (kindTag == 16){
-            kind = "LESS_THAN";
+            kind = "GREATER_EQUAL";
         } else if (kindTag == 17){
+            kind = "LESS_THAN";
+        } else if (kindTag == 18){
             kind = "LESS_EQUAL";
         } else {
             error err = { message: "instrucion kind " + kindTag + " not impl." };

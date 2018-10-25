@@ -74,7 +74,7 @@ public class BIREmitter extends BIRVisitor {
         sb.append("\n");
         birWorker.basicBlocks.forEach(birBasicBlock -> birBasicBlock.accept(this));
         sb.deleteCharAt(sb.lastIndexOf("\n"));
-        sb.append("}\n\n");
+        sb.append("\t}\n\n");
     }
 
     public void visit(BIRNode.BIRBasicBlock birBasicBlock) {

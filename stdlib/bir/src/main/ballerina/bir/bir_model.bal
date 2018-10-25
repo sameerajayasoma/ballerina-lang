@@ -71,6 +71,12 @@ public type BTypeNil "()";
 
 public type BTypeInt "int";
 
+public type BTypeByte "byte";
+
+public type BTypeFloat "float";
+
+public type BTypeString "string";
+
 public type BTypeBoolean "boolean";
 
 public type BUnionType record {
@@ -81,7 +87,7 @@ public type BArrayType record {
    BType eType;
 };
 
-public type BType BTypeInt | BTypeBoolean | BTypeNil | "byte" | "float" | "string" | BUnionType |
+public type BType BTypeInt | BTypeBoolean | BTypeNil | BTypeByte | BTypeFloat | BTypeString | BUnionType |
                   BInvokableType | BArrayType;
 
 public type BTypeSymbol record {

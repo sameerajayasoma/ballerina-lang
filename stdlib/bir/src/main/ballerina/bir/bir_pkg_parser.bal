@@ -19,9 +19,8 @@ public type PackageParser object {
         var workerCount = reader.readInt32();
 
         Worker [] workers;
-        var numBB = reader.readInt32();
         int i = 0;
-        while (i < numBB) {
+        while (i < workerCount) {
             WorkerBodyParser workerBodyParser = new(reader);
             workers[i] = workerBodyParser.parseWorker();
             i++;
@@ -37,7 +36,7 @@ public type PackageParser object {
     }
 
     public function parsePackage() returns Package {
-        var pkgIdCp = reader.readInt32();
+        PackageId id = reader.readPackageID();
         var numFuncs = reader.readInt32();
         Function[] funcs;
         int i;
@@ -45,7 +44,12 @@ public type PackageParser object {
             funcs[i] = parseFunction();
             i++;
         }
-        return { functions:funcs };
+        return {
+            functions:funcs,
+            name:{value:id.name},
+            org:{value:id.org},
+            versionValue:{value:id.versionValue}
+        };
     }
 
 

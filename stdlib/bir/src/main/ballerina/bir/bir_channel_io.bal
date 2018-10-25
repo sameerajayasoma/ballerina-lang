@@ -13,6 +13,8 @@ public type BirChannelReader object {
             return "int";
         } else if (sginatureAlias == "B"){
             return "boolean";
+        } else if (sginatureAlias == "S"){
+            return "string";
         }
         error err = { message: "type signature " + sginatureAlias + " not supported." };
         throw err;
@@ -24,6 +26,10 @@ public type BirChannelReader object {
 
     public function readIntCpRef() returns int {
         return cp.ints[reader.readInt32()];
+    }
+
+    public function readPackageID() returns PackageId {
+        return cp.packages[reader.readInt32()];
     }
 
 

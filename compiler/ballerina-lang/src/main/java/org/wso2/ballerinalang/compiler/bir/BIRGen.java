@@ -109,6 +109,9 @@ public class BIRGen extends BLangNodeVisitor {
         // Lower function nodes in AST to bir function nodes.
         // TODO handle init, start, stop functions
         astPkg.functions.forEach(astFunc -> astFunc.accept(this));
+        astPkg.initFunction.accept(this);
+        astPkg.startFunction.accept(this);
+        astPkg.stopFunction.accept(this);
     }
 
     public void visit(BLangFunction astFunc) {
@@ -120,22 +123,12 @@ public class BIRGen extends BLangNodeVisitor {
         this.env.enclPkg.functions.add(birFunc);
         this.env.enclFunc = birFunc;
 
-        //TODO remove the hardcoded value "default"
-        BIRWorker defaultWorker = new BIRWorker(new Name("default"));
-
-        // Create the entry basic block
-        BIRBasicBlock entryBB = new BIRBasicBlock(this.env.nextBBId(names));
-        defaultWorker.basicBlocks.add(entryBB);
-        this.env.enclBB = entryBB;
-
-        this.env.enclWorker = defaultWorker;
-
-        astFunc.body.accept(this);
-        this.env.clear();
-
         List<BIRBasicBlock> workerBasicBlock = new ArrayList<>();
 
         for (BLangWorker worker : astFunc.workers) {
+
+
+
             BIRWorker birWorker = new BIRWorker(names.fromIdNode(worker.name));
 
             // Create the entry basic block
@@ -147,14 +140,43 @@ public class BIRGen extends BLangNodeVisitor {
 
             this.env.enclWorker = birWorker;
 
-            astFunc.body.accept(this);
+            astFunc.requiredParams.forEach(p -> p.accept(this));
+            astFunc.defaultableParams.forEach(p -> p.accept(this));
+            if (astFunc.restParam != null) {
+                astFunc.restParam.accept(this);
+            }
+
+            worker.body.accept(this);
             birWorker.basicBlocks.add(this.env.returnBB);
-            this.env.clear();
 
             // Rearrange basic block ids.
             birWorker.basicBlocks.forEach(bb -> bb.id = this.env.nextBBId(names));
             this.env.clear();
+
+            birFunc.workers.add(birWorker);
         }
+
+
+
+        //TODO remove the hardcoded value "default"
+        BIRWorker defaultWorker = new BIRWorker(new Name("default"));
+
+        // Create the entry basic block
+        BIRBasicBlock entryBB = new BIRBasicBlock(this.env.nextBBId(names));
+        defaultWorker.basicBlocks.add(entryBB);
+        this.env.enclBB = entryBB;
+
+        this.env.enclWorker = defaultWorker;
+
+        astFunc.requiredParams.forEach(p -> p.accept(this));
+        astFunc.defaultableParams.forEach(p -> p.accept(this));
+        if (astFunc.restParam != null) {
+            astFunc.restParam.accept(this);
+        }
+
+        astFunc.body.accept(this);
+
+        birFunc.workers.add(defaultWorker);
 
         if (workerBasicBlock.isEmpty()) {
             defaultWorker.basicBlocks.add(this.env.returnBB);
@@ -204,20 +226,24 @@ public class BIRGen extends BLangNodeVisitor {
     }
 
     public void visit(BLangVariableDef astVarDefStmt) {
-        BIRVariableDcl birVarDcl = new BIRVariableDcl(astVarDefStmt.var.symbol.type,
+        astVarDefStmt.var.accept(this);
+    }
+
+    public void visit(BLangVariable astVar) {
+        BIRVariableDcl birVarDcl = new BIRVariableDcl(astVar.symbol.type,
                 this.env.nextLocalVarId(names), VarKind.LOCAL);
         this.env.enclWorker.localVars.add(birVarDcl);
 
         // We maintain a mapping from variable symbol to the bir_variable declaration.
         // This is required to pull the correct bir_variable declaration for variable references.
-        this.env.symbolVarMap.put(astVarDefStmt.var.symbol, birVarDcl);
+        this.env.symbolVarMap.put(astVar.symbol, birVarDcl);
 
-        if (astVarDefStmt.var.expr == null) {
+        if (astVar.expr == null) {
             return;
         }
 
         // Visit the rhs expression.
-        astVarDefStmt.var.expr.accept(this);
+        astVar.expr.accept(this);
 
         // Create a variable reference and
         BIRVarRef varRef = new BIRVarRef(birVarDcl);
@@ -225,6 +251,10 @@ public class BIRGen extends BLangNodeVisitor {
     }
 
     public void visit(BLangAssignment astAssignStmt) {
+        //TODO below check is just to test the flow, fix properly ASAP
+        if (!(astAssignStmt.varRef instanceof BLangLocalVarRef)) {
+            return;
+        }
         // TODO The following works only for local variable references.
         BLangLocalVarRef astVarRef = (BLangLocalVarRef) astAssignStmt.varRef;
 

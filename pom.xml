@@ -814,11 +814,11 @@
                 <artifactId>ballerina-backend-llvm</artifactId>
                 <version>${ballerina.version}</version>
             </dependency>
-            <!--<dependency>-->
-                <!--<groupId>org.ballerinalang</groupId>-->
-                <!--<artifactId>ballerina-backend-bvm</artifactId>-->
-                <!--<version>${ballerina.version}</version>-->
-            <!--</dependency>-->
+            <dependency>
+                <groupId>org.ballerinalang</groupId>
+                <artifactId>ballerina-backend-bvm</artifactId>
+                <version>${ballerina.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.ballerinalang</groupId>
                 <artifactId>ballerina-launcher</artifactId>
@@ -1675,8 +1675,8 @@
                 <module>bvm/ballerina-logging</module>
                 <module>cli/ballerina-launcher</module>
                 <module>cli/ballerina-packerina</module>
+                <module>compiler/ballerina-backend-bvm</module>
                 <module>compiler/ballerina-backend-llvm</module>
-                <!--<module>compiler/ballerina-backend-bvm</module>-->
 
                 <!--Should Run Before tests/ballerina-test-->
                 <module>misc/protobuf-ballerina</module>
@@ -1759,8 +1759,8 @@
                 <module>bvm/ballerina-logging</module>
                 <module>cli/ballerina-launcher</module>
                 <module>cli/ballerina-packerina</module>
+                <module>compiler/ballerina-backend-bvm</module>
                 <module>compiler/ballerina-backend-llvm</module>
-                <!--<module>compiler/ballerina-backend-bvm</module>-->
 
                 <!--Should Run Before tests/ballerina-test-->
                 <module>misc/protobuf-ballerina</module>
@@ -1839,8 +1839,8 @@
                 <module>bvm/ballerina-logging</module>
                 <module>cli/ballerina-launcher</module>
                 <module>cli/ballerina-packerina</module>
+                <module>compiler/ballerina-backend-bvm</module>
                 <module>compiler/ballerina-backend-llvm</module>
-                <!--<module>compiler/ballerina-backend-bvm</module>-->
 
                 <!--Should Run Before tests/ballerina-test-->
                 <module>misc/protobuf-ballerina</module>

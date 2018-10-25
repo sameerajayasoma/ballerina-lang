@@ -17,6 +17,7 @@
  */
 package org.ballerinalang.packerina.cmd;
 
+import org.ballerinalang.compiler.backend.bvm.BirBvmGen;
 import org.ballerinalang.compiler.backend.llvm.NativeGen;
 import org.ballerinalang.launcher.BLauncherCmd;
 import org.ballerinalang.launcher.LauncherUtils;
@@ -66,6 +67,11 @@ public class BuildCommand implements BLauncherCmd {
                         description = "compile Ballerina program to a native binary")
     private boolean nativeBinary;
 
+    //TODO temp flag, remove this and create a proper flow
+    @CommandLine.Option(names = {"--bir-bvm-binary"}, hidden = true,
+            description = "compile Ballerina program to a native binary")
+    private boolean birBvmBinary;
+
     @CommandLine.Option(names = "--dump-bir", hidden = true)
     private boolean dumpBIR;
 
@@ -90,6 +96,8 @@ public class BuildCommand implements BLauncherCmd {
         Path sourceRootPath = Paths.get(System.getProperty(USER_DIR));
         if (nativeBinary) {
             genNativeBinary(sourceRootPath, argList);
+        } else if (birBvmBinary) {
+            genBirBvmBinary(sourceRootPath, argList);
         } else if (argList == null || argList.size() == 0) {
             // ballerina build
             BuilderUtils.compileWithTestsAndWrite(sourceRootPath, offline, lockEnabled, skiptests);
@@ -215,6 +223,17 @@ public class BuildCommand implements BLauncherCmd {
 
         // TODO Check whether we need to remove last slash from program name.
         NativeGen.genBinaryExecutable(projectDirPath, programName, outputFileName,
+                offline, lockEnabled, dumpBIR, dumpLLVMIR);
+    }
+
+    private void genBirBvmBinary(Path projectDirPath, List<String> argList) {
+        if (argList == null || argList.size() != 1) {
+            throw LauncherUtils.createUsageExceptionWithHelp("no Ballerina program given");
+        }
+        String programName = argList.get(0);
+
+        // TODO Check whether we need to remove last slash from program name.
+        BirBvmGen.genBinaryExecutable(projectDirPath, programName, outputFileName,
                 offline, lockEnabled, dumpBIR, dumpLLVMIR);
     }
 }
