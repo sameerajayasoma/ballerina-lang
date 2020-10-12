@@ -83,7 +83,7 @@ public class PackageCompilation {
         // This graph should only contain the modules in that particular package.
         // Topologically sort the module dependency graph.
         // Iterate through the sorted module list.
-        // Compile the module and collect diagnostics.
+        // Compile the module and git collect diagnostics.
         // Repeat this for each module in each package in the package dependency graph.
         List<PackageId> sortedPackageIds = dependencyGraph.toTopologicallySortedList();
         for (PackageId packageId : sortedPackageIds) {
