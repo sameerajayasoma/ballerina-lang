@@ -42,6 +42,16 @@ public class SemanticVersionTests {
     }
 
     @Test
+    public void testPreReleaseVersionWithHyphens() {
+        SemanticVersion version = SemanticVersion.from("0.6.0-alpha2-20210311-184300-688245e");
+        Assert.assertEquals(version.major(), 0);
+        Assert.assertEquals(version.minor(), 6);
+        Assert.assertEquals(version.patch(), 0);
+        Assert.assertEquals(version.preReleasePart(), "alpha2-20210311-184300-688245e");
+        Assert.assertFalse(version.isStable());
+    }
+
+    @Test
     public void testBuildMetadata() {
         SemanticVersion version = SemanticVersion.from("1.0.1+20130313144700");
         Assert.assertEquals(version.major(), 1);
